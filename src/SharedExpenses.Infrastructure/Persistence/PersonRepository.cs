@@ -70,9 +70,12 @@ namespace SharedExpenses.Infrastructure.Persistence
 
         public async Task<List<Person>> GetAllAsync(CancellationToken ct = default)
         {
+            // Mismo orden que ix_people_active_order (inactivas primero); las activas mantienen su orden relativo
             return await _people
                 .Find(Builders<Person>.Filter.Empty)
-                .SortBy(x => x.CreatedOn)
+                .SortBy(x => x.Enabled)
+                .ThenBy(x => x.CreatedOn)
+                .ThenBy(x => x.NormalizedName)
                 .ToListAsync(ct)
                 .ConfigureAwait(false);
         }

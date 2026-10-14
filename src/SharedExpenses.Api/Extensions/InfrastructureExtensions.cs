@@ -4,7 +4,10 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
+using SharedExpenses.Api.Workers;
 using SharedExpenses.Application.Helpers;
+using SharedExpenses.Domain.Services;
+using SharedExpenses.Infrastructure.Services;
 using SharedExpenses.Domain.Options;
 using SharedExpenses.Domain.Repositories;
 using SharedExpenses.Infrastructure.Configurations;
@@ -85,6 +88,10 @@ namespace SharedExpenses.Api.Extensions
             services.AddScoped<ISettingsRepository, SettingsRepository>();
             services.AddScoped<IPersonRepository, PersonRepository>();
             services.AddScoped<IExpenseRepository, ExpenseRepository>();
+            services.AddSingleton<IDatabaseHealth, MongoDatabaseHealth>();
+
+            // Índices en segundo plano: la API arranca aunque MongoDB todavía no responda
+            services.AddHostedService<MongoIndexInitializer>();
 
             return services;
         }

@@ -14,8 +14,13 @@ dotnet run --project SharedExpenses.Api --launch-profile http   # http://localho
 dotnet test SharedExpenses.Service.sln
 ```
 
-Al arrancar se crean los índices. La primera vez que se consultan, la configuración y las personas
-se crean con la sección `DefaultSettings` de `appsettings.json`.
+Al arrancar, un worker en segundo plano (`MongoIndexInitializer`) sincroniza los índices: crea los que
+faltan y elimina los propios (`ix_*`/`ux_*`) que ya no se usan. Si MongoDB no responde, la API arranca
+igual y reintenta con espera creciente (5 s, 10 s, … hasta 5 min); mientras tanto, los endpoints que usan
+la base responden **503** y `GET /api/v1/health` informa `Degraded`.
+
+La primera vez que se consultan, la configuración y las personas se crean con la sección
+`DefaultSettings` de `appsettings.json`.
 
 ## Arquitectura
 
@@ -40,14 +45,21 @@ Dependencias: `Api → Application → Infrastructure → Domain`.
 | `settings` | Documento único: arriendo base y costos fijos |
 | `expenses` | Un documento por gasto (o por cuota), con `month` (`yyyy-MM`) indexado |
 
-Índices de `people`:
-- `ux_people_name`: único parcial (`enabled: true`) sobre el nombre en minúsculas.
+### Índices
 
-Índices de `expenses`:
-- `ix_expenses_month_date`: listado del mes.
-- `ux_expenses_month_rent`: único parcial (`isRent: true`), garantiza un solo arriendo por mes aunque
-  varios requests abran el mismo mes a la vez.
-- `ix_expenses_installment_plan`: borrar un plan de cuotas completo.
+Cada consulta de los repositorios se validó con `explain()`: todas usan índice (sin `COLLSCAN`) y
+ninguna ordena en memoria.
+
+| Colección | Índice | Claves | Consultas que resuelve |
+|---|---|---|---|
+| `people` | `ux_people_name` | `normalizedName` (único, parcial `enabled: true`) | Nombre duplicado; no permite dos activas con el mismo nombre |
+| `people` | `ix_people_active_order` | `enabled, createdOn, normalizedName` | Personas activas en orden; listado para el respaldo |
+| `expenses` | `ix_expenses_month_order` | `month, isRent ↓, isFixed ↓, date, createdOn` | Gastos del mes ya ordenados; respaldo; `distinct` de meses |
+| `expenses` | `ux_expenses_month_rent` | `month` (único, parcial `isRent: true`) | ¿El mes está abierto?; garantiza un solo arriendo por mes |
+| `expenses` | `ix_expenses_plan` | `installment.planId` (sparse) | Borrar un plan de cuotas completo |
+
+`ix_expenses_plan` es *sparse* y no parcial: MongoDB no usa un índice parcial con filtro
+`installment: {$exists: true}` para una consulta por `installment.planId`.
 
 ## Reglas de negocio
 
@@ -92,6 +104,7 @@ Dependencias: `Api → Application → Infrastructure → Domain`.
 | PATCH  | `/expenses/{id}/payment` | 204, body `{ "paid": true }` |
 | DELETE | `/expenses/{id}?scope=Single\|Plan` | 204 |
 | GET    | `/categories` | Categorías (`code` para la API, `name` para mostrar) |
+| GET    | `/health` | `{ status, database }`: 200 `Healthy` o 503 `Degraded` si MongoDB no responde |
 | GET    | `/backup` | Respaldo completo (personas, configuración, gastos) |
 | POST   | `/backup` | 204, reemplaza personas, configuración y gastos |
 

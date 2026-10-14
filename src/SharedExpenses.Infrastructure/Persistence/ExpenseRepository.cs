@@ -63,16 +63,21 @@ namespace SharedExpenses.Infrastructure.Persistence
                 .ConfigureAwait(false);
         }
 
+        // Orden de la planilla: arriendo, fijos y luego por fecha. Coincide con ix_expenses_month_order,
+        // así Mongo lo resuelve con el índice y no ordena en memoria
+        private static readonly SortDefinition<Expense> SheetOrder = Builders<Expense>.Sort
+            .Descending(x => x.IsRent)
+            .Descending(x => x.IsFixed)
+            .Ascending(x => x.Date)
+            .Ascending(x => x.CreatedOn);
+
         public async Task<List<Expense>> GetByMonthAsync(YearMonth month, CancellationToken ct = default)
         {
             var filter = Builders<Expense>.Filter.Eq(x => x.Month, month);
 
             return await _expenses
                 .Find(filter)
-                .SortByDescending(x => x.IsRent)
-                .ThenByDescending(x => x.IsFixed)
-                .ThenBy(x => x.Date)
-                .ThenBy(x => x.CreatedOn)
+                .Sort(SheetOrder)
                 .ToListAsync(ct)
                 .ConfigureAwait(false);
         }
@@ -81,8 +86,7 @@ namespace SharedExpenses.Infrastructure.Persistence
         {
             return await _expenses
                 .Find(Builders<Expense>.Filter.Empty)
-                .SortBy(x => x.Month)
-                .ThenBy(x => x.Date)
+                .Sort(Builders<Expense>.Sort.Combine(Builders<Expense>.Sort.Ascending(x => x.Month), SheetOrder))
                 .ToListAsync(ct)
                 .ConfigureAwait(false);
         }

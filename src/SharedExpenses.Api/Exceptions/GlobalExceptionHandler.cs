@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using MongoDB.Driver;
 using SharedExpenses.Domain.Exceptions;
 
 namespace SharedExpenses.Api.Exceptions
@@ -21,6 +22,7 @@ namespace SharedExpenses.Api.Exceptions
                 DomainException             => (400, exception.Message),
                 ValidationException         => (400, "Uno o más campos no son válidos."),
                 BadHttpRequestException     => (400, "El cuerpo o los parámetros de la solicitud no son válidos."),
+                MongoConnectionException or TimeoutException => HandleDatabaseUnavailable(exception),
                 _                           => HandleUnexpected(exception)
             };
 
@@ -50,6 +52,13 @@ namespace SharedExpenses.Api.Exceptions
             return true;
         }
 
+        // Base caída, IP bloqueada en Atlas o tiempo de espera agotado al seleccionar servidor
+        private (int, string) HandleDatabaseUnavailable(Exception ex)
+        {
+            _logger.LogWarning(ex, "Base de datos no disponible: {Message}", ex.Message);
+            return (503, "La base de datos no está disponible en este momento. Intenta de nuevo en unos segundos.");
+        }
+
         private (int, string) HandleUnexpected(Exception ex)
         {
             _logger.LogError(ex, "Excepción inesperada: {Message}", ex.Message);
@@ -61,6 +70,7 @@ namespace SharedExpenses.Api.Exceptions
             NotFoundException       => "Recurso no encontrado",
             ConflictException       => "Conflicto de datos",
             ValidationException     => "Validación fallida",
+            MongoConnectionException or TimeoutException => "Servicio no disponible",
             DomainException         => "Error de dominio",
             BadHttpRequestException => "Solicitud inválida",
             _                       => "Error interno del servidor"
