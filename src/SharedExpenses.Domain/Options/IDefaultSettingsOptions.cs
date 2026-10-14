@@ -1,5 +1,3 @@
-using SharedExpenses.Domain.Enums;
-
 namespace SharedExpenses.Domain.Options
 {
     /// <summary>
@@ -15,5 +13,6 @@ namespace SharedExpenses.Domain.Options
 
     public record DefaultPerson(string Name, long Contribution);
 
-    public record DefaultFixedCost(string Description, long Amount, Category Category);
+    /// <param name="Category">Id de la categoría (por ejemplo "Housing").</param>
+    public record DefaultFixedCost(string Description, long Amount, string Category);
 }

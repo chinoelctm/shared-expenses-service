@@ -1,5 +1,4 @@
 using SharedExpenses.Domain.Entities;
-using SharedExpenses.Domain.Enums;
 using SharedExpenses.Domain.Exceptions;
 
 namespace SharedExpenses.Tests.Domain
@@ -11,7 +10,7 @@ namespace SharedExpenses.Tests.Domain
         [Fact]
         public void InstallmentPlan_LoadsRemainderOnLastInstallment()
         {
-            var plan = Expense.CreateInstallmentPlan("Notebook", 100, new DateOnly(2026, 10, 13), Category.Technology,
+            var plan = Expense.CreateInstallmentPlan("Notebook", 100, new DateOnly(2026, 10, 13), "Technology",
                 isFixed: false, firstPaid: true, installments: 3, Now);
 
             Assert.Equal([33L, 33L, 34L], plan.Select(e => e.Amount));
@@ -23,7 +22,7 @@ namespace SharedExpenses.Tests.Domain
         [Fact]
         public void InstallmentPlan_OnlyFirstInstallmentIsPaid()
         {
-            var plan = Expense.CreateInstallmentPlan("Notebook", 90000, new DateOnly(2026, 10, 13), Category.Technology,
+            var plan = Expense.CreateInstallmentPlan("Notebook", 90000, new DateOnly(2026, 10, 13), "Technology",
                 isFixed: false, firstPaid: true, installments: 3, Now);
 
             Assert.Equal([true, false, false], plan.Select(e => e.Paid));
@@ -32,7 +31,7 @@ namespace SharedExpenses.Tests.Domain
         [Fact]
         public void InstallmentPlan_ClampsDayAndCrossesYear()
         {
-            var plan = Expense.CreateInstallmentPlan("Seguro", 3000, new DateOnly(2026, 12, 31), Category.Other,
+            var plan = Expense.CreateInstallmentPlan("Seguro", 3000, new DateOnly(2026, 12, 31), "Other",
                 isFixed: false, firstPaid: false, installments: 3, Now);
 
             Assert.Equal(
@@ -46,7 +45,7 @@ namespace SharedExpenses.Tests.Domain
         {
             var payer = Guid.NewGuid();
             var other = Guid.NewGuid();
-            var expense = Expense.Create("Super", 1000, new DateOnly(2026, 10, 2), Category.Supermarket,
+            var expense = Expense.Create("Super", 1000, new DateOnly(2026, 10, 2), "Supermarket",
                 false, false, Now, paidBy: payer);
 
             Assert.True(expense.IsShareSettled(payer));
@@ -60,7 +59,7 @@ namespace SharedExpenses.Tests.Domain
         public void InstallmentPlan_KeepsPayerOnEveryInstallment()
         {
             var payer = Guid.NewGuid();
-            var plan = Expense.CreateInstallmentPlan("Notebook", 90000, new DateOnly(2026, 10, 13), Category.Technology,
+            var plan = Expense.CreateInstallmentPlan("Notebook", 90000, new DateOnly(2026, 10, 13), "Technology",
                 isFixed: false, firstPaid: false, installments: 3, Now, paidBy: payer);
 
             Assert.All(plan, e => Assert.Equal(payer, e.PaidBy));
@@ -70,15 +69,15 @@ namespace SharedExpenses.Tests.Domain
         public void Create_RejectsRentDescription()
         {
             Assert.Throws<DomainException>(() =>
-                Expense.Create("Arriendo", 1000, new DateOnly(2026, 10, 1), Category.Housing, false, false, Now));
+                Expense.Create("Arriendo", 1000, new DateOnly(2026, 10, 1), "Housing", false, false, Now));
         }
 
         [Fact]
         public void Update_MovesExpenseToNewMonth()
         {
-            var expense = Expense.Create("Luz", 60500, new DateOnly(2026, 10, 16), Category.BasicServices, false, false, Now);
+            var expense = Expense.Create("Luz", 60500, new DateOnly(2026, 10, 16), "BasicServices", false, false, Now);
 
-            expense.Update("Luz", 60500, new DateOnly(2026, 11, 2), Category.BasicServices, false, false, Now);
+            expense.Update("Luz", 60500, new DateOnly(2026, 11, 2), "BasicServices", false, false, Now);
 
             Assert.Equal("2026-11", expense.Month.ToString());
         }
@@ -89,7 +88,7 @@ namespace SharedExpenses.Tests.Domain
             var rent = Expense.CreateRent(SharedExpenses.Domain.ValueObjects.YearMonth.Parse("2026-10"), 465710, Now);
 
             Assert.Throws<DomainException>(() =>
-                rent.Update("Otro", 1, new DateOnly(2026, 10, 1), Category.Housing, true, false, Now));
+                rent.Update("Otro", 1, new DateOnly(2026, 10, 1), "Housing", true, false, Now));
 
             rent.ResetRent(Now);
             Assert.Equal(0, rent.Amount);

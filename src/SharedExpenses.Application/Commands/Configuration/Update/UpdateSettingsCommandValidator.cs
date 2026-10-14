@@ -31,7 +31,7 @@ namespace SharedExpenses.Application.Commands.Configuration.Update
                 .GreaterThan(0).WithMessage("El monto del costo fijo debe ser mayor a 0.");
 
             RuleFor(x => x.Category)
-                .IsInEnum().WithMessage("La categoría no es válida.");
+                .NotEmpty().WithMessage("La categoría es obligatoria.");
         }
     }
 }

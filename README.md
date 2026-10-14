@@ -54,7 +54,9 @@ ninguna ordena en memoria.
 |---|---|---|---|
 | `people` | `ux_people_name` | `normalizedName` (único, parcial `enabled: true`) | Nombre duplicado; no permite dos activas con el mismo nombre |
 | `people` | `ix_people_active_order` | `enabled, createdOn, normalizedName` | Personas activas en orden; listado para el respaldo |
-| `expenses` | `ix_expenses_month_order` | `month, isRent ↓, isFixed ↓, date, createdOn` | Gastos del mes ya ordenados; respaldo; `distinct` de meses |
+| `categories` | `ux_categories_name` | `normalizedName` (único, parcial `enabled: true`) | Nombre de categoría duplicado entre las activas |
+| `categories` | `ix_categories_order` | `createdOn, normalizedName` | Categorías en orden de creación; respaldo |
+| `expenses` | `ix_expenses_month_amount` | `month, isRent ↓, isFixed ↓, amount ↓, category, createdOn` | Gastos del mes ya ordenados (arriendo, fijos, variables de mayor a menor monto y por categoría); respaldo; `distinct` de meses |
 | `expenses` | `ux_expenses_month_rent` | `month` (único, parcial `isRent: true`) | ¿El mes está abierto?; garantiza un solo arriendo por mes |
 | `expenses` | `ix_expenses_plan` | `installment.planId` (sparse) | Borrar un plan de cuotas completo |
 
@@ -103,10 +105,13 @@ ninguna ordena en memoria.
 | PUT    | `/expenses/{id}` | 204 (si es cuota, edita solo esa cuota) |
 | PATCH  | `/expenses/{id}/payment` | 204, body `{ "paid": true }` |
 | DELETE | `/expenses/{id}?scope=Single\|Plan` | 204 |
-| GET    | `/categories` | Categorías (`code` para la API, `name` para mostrar) |
+| GET    | `/categories` | Categorías activas `{ id, name, color, locked }` (se siembran las por defecto si no hay ninguna) |
+| POST   | `/categories` | 201 `{ id }`, body `{ "name": "Mascotas", "color": "#a855f7" }` (409 si el nombre ya existe) |
+| PUT    | `/categories/{id}` | 204 |
+| DELETE | `/categories/{id}` | 204, la desactiva: los gastos que ya la usan la conservan. `Housing` (arriendo) no se puede eliminar |
 | GET    | `/health` | `{ status, database }`: 200 `Healthy` o 503 `Degraded` si MongoDB no responde |
-| GET    | `/backup` | Respaldo completo (personas, configuración, gastos) |
-| POST   | `/backup` | 204, reemplaza personas, configuración y gastos |
+| GET    | `/backup` | Respaldo completo (personas, categorías, configuración, gastos) |
+| POST   | `/backup` | 204, reemplaza personas, categorías, configuración y gastos |
 
 Errores: `ProblemDetails` (400 validación/dominio con `errors` por campo, 404, 409, 500).
 Enums viajan como texto (`"Supermarket"`), fechas como `"2026-10-05"`.

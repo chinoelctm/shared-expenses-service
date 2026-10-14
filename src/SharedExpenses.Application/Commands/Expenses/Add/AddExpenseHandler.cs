@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using SharedExpenses.Application.Helpers;
+using SharedExpenses.Application.Services.Categories;
 using SharedExpenses.Application.Services.Configuration;
 using SharedExpenses.Application.Services.Months;
 using SharedExpenses.Application.Services.People;
@@ -14,17 +15,20 @@ namespace SharedExpenses.Application.Commands.Expenses.Add
         private readonly IExpenseRepository _repository;
         private readonly IPersonRepository _personRepository;
         private readonly ISettingsProvider _settingsProvider;
+        private readonly ICategoryProvider _categoryProvider;
         private readonly IMonthInitializer _monthInitializer;
         private readonly TimeHelper _timeHelper;
         private readonly ILogger<AddExpenseHandler> _logger;
 
         public AddExpenseHandler(IExpenseRepository repository, IPersonRepository personRepository,
-            ISettingsProvider settingsProvider, IMonthInitializer monthInitializer, TimeHelper timeHelper,
+            ISettingsProvider settingsProvider, ICategoryProvider categoryProvider, IMonthInitializer monthInitializer,
+            TimeHelper timeHelper,
             ILogger<AddExpenseHandler> logger)
         {
             _repository = repository;
             _personRepository = personRepository;
             _settingsProvider = settingsProvider;
+            _categoryProvider = categoryProvider;
             _monthInitializer = monthInitializer;
             _timeHelper = timeHelper;
             _logger = logger;
@@ -33,6 +37,7 @@ namespace SharedExpenses.Application.Commands.Expenses.Add
         public async Task<AddExpenseResponse> Handle(AddExpenseCommand command, CancellationToken ct)
         {
             await _personRepository.EnsurePayerIsActiveAsync(command.PaidBy, ct);
+            (await _categoryProvider.GetCatalogAsync(ct)).EnsureActive(command.Category);
             var now = _timeHelper.GetUtcNow();
 
             var expenses = command.Installments > 1

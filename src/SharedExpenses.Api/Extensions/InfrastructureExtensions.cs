@@ -87,6 +87,7 @@ namespace SharedExpenses.Api.Extensions
         {
             services.AddScoped<ISettingsRepository, SettingsRepository>();
             services.AddScoped<IPersonRepository, PersonRepository>();
+            services.AddScoped<ICategoryRepository, CategoryRepository>();
             services.AddScoped<IExpenseRepository, ExpenseRepository>();
             services.AddSingleton<IDatabaseHealth, MongoDatabaseHealth>();
 

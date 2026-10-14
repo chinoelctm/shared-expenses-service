@@ -1,5 +1,3 @@
-using SharedExpenses.Domain.Enums;
-
 namespace SharedExpenses.Application.Queries.Months.GetSummary
 {
     public record GetMonthSummaryResponse(
@@ -32,5 +30,7 @@ namespace SharedExpenses.Application.Queries.Months.GetSummary
         long Paid,
         long Pending);
 
-    public record CategorySummaryDto(Category Category, string Name, long Amount, decimal Percentage);
+    /// <param name="Category">Id de la categoría.</param>
+    /// <param name="Color">Color #rrggbb de la categoría.</param>
+    public record CategorySummaryDto(string Category, string Name, string Color, long Amount, decimal Percentage);
 }

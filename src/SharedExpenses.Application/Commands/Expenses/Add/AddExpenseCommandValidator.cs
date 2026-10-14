@@ -21,7 +21,7 @@ namespace SharedExpenses.Application.Commands.Expenses.Add
             RuleFor(x => x.Date).MustBeValidExpenseDate();
 
             RuleFor(x => x.Category)
-                .IsInEnum().WithMessage("La categoría no es válida.");
+                .NotEmpty().WithMessage("La categoría es obligatoria.");
 
             RuleFor(x => x.Installments)
                 .InclusiveBetween(1, Expense.MaxInstallments)

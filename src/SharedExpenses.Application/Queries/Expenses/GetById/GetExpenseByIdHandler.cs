@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using SharedExpenses.Application.DTOs;
+using SharedExpenses.Application.Services.Categories;
 using SharedExpenses.Application.Services.People;
 using SharedExpenses.Domain.Exceptions;
 using SharedExpenses.Domain.Repositories;
@@ -11,13 +12,16 @@ namespace SharedExpenses.Application.Queries.Expenses.GetById
     {
         private readonly IExpenseRepository _repository;
         private readonly IPeopleProvider _peopleProvider;
+        private readonly ICategoryProvider _categoryProvider;
         private readonly ILogger<GetExpenseByIdHandler> _logger;
 
         public GetExpenseByIdHandler(IExpenseRepository repository, IPeopleProvider peopleProvider,
+            ICategoryProvider categoryProvider,
             ILogger<GetExpenseByIdHandler> logger)
         {
             _repository = repository;
             _peopleProvider = peopleProvider;
+            _categoryProvider = categoryProvider;
             _logger = logger;
         }
 
@@ -31,7 +35,8 @@ namespace SharedExpenses.Application.Queries.Expenses.GetById
             }
 
             var shares = await _peopleProvider.GetSharesAsync(ct);
-            return ExpenseDto.From(expense, shares);
+            var categories = await _categoryProvider.GetCatalogAsync(ct);
+            return ExpenseDto.From(expense, shares, categories);
         }
     }
 }

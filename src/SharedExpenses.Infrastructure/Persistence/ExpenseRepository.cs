@@ -63,12 +63,13 @@ namespace SharedExpenses.Infrastructure.Persistence
                 .ConfigureAwait(false);
         }
 
-        // Orden de la planilla: arriendo, fijos y luego por fecha. Coincide con ix_expenses_month_order,
-        // así Mongo lo resuelve con el índice y no ordena en memoria
+        // Orden de la planilla: arriendo, fijos y luego de mayor a menor monto; a igual monto, agrupados por
+        // categoría. Coincide con ix_expenses_month_amount, así Mongo lo resuelve con el índice
         private static readonly SortDefinition<Expense> SheetOrder = Builders<Expense>.Sort
             .Descending(x => x.IsRent)
             .Descending(x => x.IsFixed)
-            .Ascending(x => x.Date)
+            .Descending(x => x.Amount)
+            .Ascending(x => x.CategoryId)
             .Ascending(x => x.CreatedOn);
 
         public async Task<List<Expense>> GetByMonthAsync(YearMonth month, CancellationToken ct = default)

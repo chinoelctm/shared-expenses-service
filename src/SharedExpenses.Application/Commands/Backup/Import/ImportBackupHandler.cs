@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using SharedExpenses.Application.Helpers;
+using SharedExpenses.Application.Services.Categories;
 using SharedExpenses.Application.Services.Configuration;
 using SharedExpenses.Domain.Entities;
 using SharedExpenses.Domain.Exceptions;
@@ -15,17 +16,22 @@ namespace SharedExpenses.Application.Commands.Backup.Import
         private readonly IPersonRepository _personRepository;
         private readonly ISettingsRepository _settingsRepository;
         private readonly ISettingsProvider _settingsProvider;
+        private readonly ICategoryRepository _categoryRepository;
+        private readonly ICategoryProvider _categoryProvider;
         private readonly TimeHelper _timeHelper;
         private readonly ILogger<ImportBackupHandler> _logger;
 
         public ImportBackupHandler(IExpenseRepository expenseRepository, IPersonRepository personRepository,
-            ISettingsRepository settingsRepository, ISettingsProvider settingsProvider, TimeHelper timeHelper,
+            ISettingsRepository settingsRepository, ISettingsProvider settingsProvider,
+            ICategoryRepository categoryRepository, ICategoryProvider categoryProvider, TimeHelper timeHelper,
             ILogger<ImportBackupHandler> logger)
         {
             _expenseRepository = expenseRepository;
             _personRepository = personRepository;
             _settingsRepository = settingsRepository;
             _settingsProvider = settingsProvider;
+            _categoryRepository = categoryRepository;
+            _categoryProvider = categoryProvider;
             _timeHelper = timeHelper;
             _logger = logger;
         }
@@ -52,6 +58,23 @@ namespace SharedExpenses.Application.Commands.Backup.Import
             if (expenses.Any(e => e.PaidBy is { } payer && !personIds.Contains(payer)))
                 throw new DomainException("El respaldo tiene gastos pagados por una persona que no está en el respaldo.");
 
+            // Respaldos antiguos no traen categorías: se validan contra las actuales y no se reemplazan
+            var categories = backup.Categories?
+                .Select((c, i) => Category.Restore(c.Id, c.Name, c.Color, c.Enabled, now.AddMilliseconds(i)))
+                .ToList();
+            var categoryIds = categories is not null
+                ? categories.Select(c => c.Id).ToHashSet()
+                : (await _categoryProvider.GetCatalogAsync(ct)).All.Select(c => c.Id).ToHashSet();
+
+            if (!categoryIds.Contains(Category.RentCategoryId))
+                throw new DomainException($"El respaldo no tiene la categoría del arriendo ({Category.RentCategoryId}).");
+
+            var missingCategory = expenses.Select(e => e.CategoryId)
+                .Concat((backup.Settings.FixedCosts ?? []).Select(f => f.Category))
+                .FirstOrDefault(id => !categoryIds.Contains(id));
+            if (missingCategory is not null)
+                throw new DomainException($"El respaldo usa la categoría \"{missingCategory}\", que no existe.");
+
             var monthWithDuplicatedRent = expenses
                 .Where(e => e.IsRent)
                 .GroupBy(e => e.Month)
@@ -68,10 +91,13 @@ namespace SharedExpenses.Application.Commands.Backup.Import
                 now: now);
 
             await _settingsRepository.SaveAsync(settings, ct);
+            if (categories is not null)
+                await _categoryRepository.ReplaceAllAsync(categories, ct);
             await _personRepository.ReplaceAllAsync(people, ct);
             await _expenseRepository.ReplaceAllAsync(expenses, ct);
 
-            _logger.LogInformation("Respaldo importado: {People} personas, {Expenses} gastos.", people.Count, expenses.Count);
+            _logger.LogInformation("Respaldo importado: {People} personas, {Categories} categorías, {Expenses} gastos.",
+                people.Count, categories?.Count ?? 0, expenses.Count);
         }
     }
 }

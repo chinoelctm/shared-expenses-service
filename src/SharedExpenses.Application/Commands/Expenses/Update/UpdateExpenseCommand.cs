@@ -1,5 +1,4 @@
 using MediatR;
-using SharedExpenses.Domain.Enums;
 
 namespace SharedExpenses.Application.Commands.Expenses.Update
 {
@@ -11,7 +10,7 @@ namespace SharedExpenses.Application.Commands.Expenses.Update
         string Description,
         long Amount,
         DateOnly Date,
-        Category Category,
+        string Category,
         bool IsFixed,
         bool Paid,
         Guid? PaidBy = null) : IRequest;

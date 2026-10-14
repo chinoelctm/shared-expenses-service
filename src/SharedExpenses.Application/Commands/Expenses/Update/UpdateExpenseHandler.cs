@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using SharedExpenses.Application.Helpers;
+using SharedExpenses.Application.Services.Categories;
 using SharedExpenses.Application.Services.Configuration;
 using SharedExpenses.Application.Services.Months;
 using SharedExpenses.Application.Services.People;
@@ -14,17 +15,20 @@ namespace SharedExpenses.Application.Commands.Expenses.Update
         private readonly IExpenseRepository _repository;
         private readonly IPersonRepository _personRepository;
         private readonly ISettingsProvider _settingsProvider;
+        private readonly ICategoryProvider _categoryProvider;
         private readonly IMonthInitializer _monthInitializer;
         private readonly TimeHelper _timeHelper;
         private readonly ILogger<UpdateExpenseHandler> _logger;
 
         public UpdateExpenseHandler(IExpenseRepository repository, IPersonRepository personRepository,
-            ISettingsProvider settingsProvider, IMonthInitializer monthInitializer, TimeHelper timeHelper,
+            ISettingsProvider settingsProvider, ICategoryProvider categoryProvider, IMonthInitializer monthInitializer,
+            TimeHelper timeHelper,
             ILogger<UpdateExpenseHandler> logger)
         {
             _repository = repository;
             _personRepository = personRepository;
             _settingsProvider = settingsProvider;
+            _categoryProvider = categoryProvider;
             _monthInitializer = monthInitializer;
             _timeHelper = timeHelper;
             _logger = logger;
@@ -39,9 +43,11 @@ namespace SharedExpenses.Application.Commands.Expenses.Update
                 throw new NotFoundException("El gasto no existe.");
             }
 
-            // Se permite conservar a un pagador que luego fue desactivado; solo se valida si cambia
+            // Se permite conservar un pagador o una categoría que luego fueron eliminados; solo se valida si cambian
             if (command.PaidBy != expense.PaidBy)
                 await _personRepository.EnsurePayerIsActiveAsync(command.PaidBy, ct);
+            if (command.Category != expense.CategoryId)
+                (await _categoryProvider.GetCatalogAsync(ct)).EnsureActive(command.Category);
 
             var previousMonth = expense.Month;
             expense.Update(command.Description, command.Amount, command.Date, command.Category, command.IsFixed,

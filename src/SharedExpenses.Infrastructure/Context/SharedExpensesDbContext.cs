@@ -12,6 +12,7 @@ namespace SharedExpenses.Infrastructure.Context
 
         public IMongoCollection<Settings> Settings { get; }
         public IMongoCollection<Person> People { get; }
+        public IMongoCollection<Category> Categories { get; }
         public IMongoCollection<Expense> Expenses { get; }
 
         public SharedExpensesDbContext(IMongoClient client, string databaseName)
@@ -20,6 +21,7 @@ namespace SharedExpenses.Infrastructure.Context
 
             Settings = Database.GetCollection<Settings>("settings");
             People = Database.GetCollection<Person>("people");
+            Categories = Database.GetCollection<Category>("categories");
             Expenses = Database.GetCollection<Expense>("expenses");
         }
 
@@ -30,8 +32,29 @@ namespace SharedExpenses.Infrastructure.Context
         public async Task EnsureIndexesAsync(CancellationToken ct = default)
         {
             await SyncIndexesAsync(People, PeopleIndexes(), ct);
+            await SyncIndexesAsync(Categories, CategoryIndexes(), ct);
             await SyncIndexesAsync(Expenses, ExpenseIndexes(), ct);
         }
+
+        private static IReadOnlyList<CreateIndexModel<Category>> CategoryIndexes() =>
+        [
+            // ExistsActiveByName + no puede haber dos categorías activas con el mismo nombre
+            new CreateIndexModel<Category>(
+                Builders<Category>.IndexKeys.Ascending(x => x.NormalizedName),
+                new CreateIndexOptions<Category>
+                {
+                    Name = "ux_categories_name",
+                    Unique = true,
+                    PartialFilterExpression = Builders<Category>.Filter.Eq(x => x.Enabled, true)
+                }),
+
+            // GetAll: orden (createdOn, normalizedName) resuelto por el índice
+            new CreateIndexModel<Category>(
+                Builders<Category>.IndexKeys
+                    .Ascending(x => x.CreatedOn)
+                    .Ascending(x => x.NormalizedName),
+                new CreateIndexOptions { Name = "ix_categories_order" })
+        ];
 
         private static IReadOnlyList<CreateIndexModel<Person>> PeopleIndexes() =>
         [
@@ -56,16 +79,17 @@ namespace SharedExpenses.Infrastructure.Context
 
         private static IReadOnlyList<CreateIndexModel<Expense>> ExpenseIndexes() =>
         [
-            // GetByMonth (filtro + orden completo sin ordenar en memoria), GetAll (respaldo) y
-            // GetMonths (distinct sobre el prefijo month)
+            // GetByMonth (filtro + orden de la planilla: arriendo, fijos, luego monto de mayor a menor y
+            // categoría) sin ordenar en memoria; GetAll (respaldo) y GetMonths (distinct sobre el prefijo month)
             new CreateIndexModel<Expense>(
                 Builders<Expense>.IndexKeys
                     .Ascending(x => x.Month)
                     .Descending(x => x.IsRent)
                     .Descending(x => x.IsFixed)
-                    .Ascending(x => x.Date)
+                    .Descending(x => x.Amount)
+                    .Ascending(x => x.CategoryId)
                     .Ascending(x => x.CreatedOn),
-                new CreateIndexOptions { Name = "ix_expenses_month_order" }),
+                new CreateIndexOptions { Name = "ix_expenses_month_amount" }),
 
             // IsMonthInitialized + garantiza un único arriendo por mes (meses abiertos en paralelo)
             new CreateIndexModel<Expense>(

@@ -1,5 +1,3 @@
-using SharedExpenses.Domain.Enums;
-
 namespace SharedExpenses.Application.Queries.Configuration.Get
 {
     public record GetSettingsResponse(
@@ -8,5 +6,5 @@ namespace SharedExpenses.Application.Queries.Configuration.Get
         DateTime CreatedOn,
         DateTime? UpdatedOn);
 
-    public record SettingsFixedCostResponse(string Description, long Amount, Category Category, string CategoryName);
+    public record SettingsFixedCostResponse(string Description, long Amount, string Category, string CategoryName, string CategoryColor);
 }

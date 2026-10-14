@@ -1,16 +1,22 @@
-using SharedExpenses.Domain.Enums;
-
 namespace SharedExpenses.Application.DTOs
 {
+    /// <param name="Categories">Si es null (respaldos antiguos), se conservan las categorías actuales.</param>
     public record BackupDto(
         List<BackupPersonDto> People,
         BackupSettingsDto Settings,
-        List<BackupExpenseDto> Expenses);
+        List<BackupExpenseDto> Expenses,
+        List<BackupCategoryDto>? Categories = null);
 
     public record BackupPersonDto(
         Guid Id,
         string Name,
         long Contribution,
+        bool Enabled);
+
+    public record BackupCategoryDto(
+        string Id,
+        string Name,
+        string Color,
         bool Enabled);
 
     public record BackupSettingsDto(
@@ -22,7 +28,7 @@ namespace SharedExpenses.Application.DTOs
         string Description,
         long Amount,
         DateOnly Date,
-        Category Category,
+        string Category,
         bool IsFixed,
         bool IsRent,
         bool Paid,

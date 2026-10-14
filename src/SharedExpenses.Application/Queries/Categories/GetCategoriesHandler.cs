@@ -1,21 +1,25 @@
 using MediatR;
-using SharedExpenses.Domain.Enums;
-using SharedExpenses.Domain.Extensions;
+using SharedExpenses.Application.Services.Categories;
 
 namespace SharedExpenses.Application.Queries.Categories
 {
     public class GetCategoriesHandler : IRequestHandler<GetCategoriesQuery, List<GetCategoriesResponse>>
     {
-        public Task<List<GetCategoriesResponse>> Handle(GetCategoriesQuery request, CancellationToken cancellationToken)
-        {
-            // Los ids no se reordenan (son estables); "Otro" se muestra siempre al final
-            var categories = Enum.GetValues<Category>()
-                .OrderBy(c => c == Category.Other)
-                .ThenBy(c => (int)c)
-                .Select(c => new GetCategoriesResponse((int)c, c.ToString(), c.GetDisplayName()))
-                .ToList();
+        private readonly ICategoryProvider _categoryProvider;
 
-            return Task.FromResult(categories);
+        public GetCategoriesHandler(ICategoryProvider categoryProvider)
+        {
+            _categoryProvider = categoryProvider;
+        }
+
+        public async Task<List<GetCategoriesResponse>> Handle(GetCategoriesQuery request, CancellationToken ct)
+        {
+            var catalog = await _categoryProvider.GetCatalogAsync(ct);
+
+            // Solo las activas, en orden de creación (las eliminadas ya no se ofrecen)
+            return catalog.Active
+                .Select(c => new GetCategoriesResponse(c.Id, c.Name, c.Color, c.IsLocked))
+                .ToList();
         }
     }
 }

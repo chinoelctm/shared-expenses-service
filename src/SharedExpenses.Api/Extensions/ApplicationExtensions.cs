@@ -2,6 +2,7 @@ using FluentValidation;
 using MediatR;
 using SharedExpenses.Application.Behaviors;
 using SharedExpenses.Application.Commands.Expenses.Add;
+using SharedExpenses.Application.Services.Categories;
 using SharedExpenses.Application.Services.Configuration;
 using SharedExpenses.Application.Services.Months;
 using SharedExpenses.Application.Services.People;
@@ -25,6 +26,7 @@ namespace SharedExpenses.Api.Extensions
 
             services.AddScoped<ISettingsProvider, SettingsProvider>();
             services.AddScoped<IPeopleProvider, PeopleProvider>();
+            services.AddScoped<ICategoryProvider, CategoryProvider>();
             services.AddScoped<IMonthInitializer, MonthInitializer>();
             services.AddSingleton<IMonthSummaryCalculator, MonthSummaryCalculator>();
 

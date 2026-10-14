@@ -1,4 +1,5 @@
 using MediatR;
+using SharedExpenses.Application.Services.Categories;
 using SharedExpenses.Application.Services.Configuration;
 using SharedExpenses.Application.Services.Months;
 using SharedExpenses.Application.Services.People;
@@ -13,15 +14,18 @@ namespace SharedExpenses.Application.Queries.Months.GetSummary
         private readonly IExpenseRepository _repository;
         private readonly ISettingsProvider _settingsProvider;
         private readonly IPeopleProvider _peopleProvider;
+        private readonly ICategoryProvider _categoryProvider;
         private readonly IMonthInitializer _monthInitializer;
         private readonly IMonthSummaryCalculator _calculator;
 
         public GetMonthSummaryHandler(IExpenseRepository repository, ISettingsProvider settingsProvider,
-            IPeopleProvider peopleProvider, IMonthInitializer monthInitializer, IMonthSummaryCalculator calculator)
+            IPeopleProvider peopleProvider, ICategoryProvider categoryProvider, IMonthInitializer monthInitializer,
+            IMonthSummaryCalculator calculator)
         {
             _repository = repository;
             _settingsProvider = settingsProvider;
             _peopleProvider = peopleProvider;
+            _categoryProvider = categoryProvider;
             _monthInitializer = monthInitializer;
             _calculator = calculator;
         }
@@ -33,8 +37,9 @@ namespace SharedExpenses.Application.Queries.Months.GetSummary
             await _monthInitializer.EnsureAsync(month, settings, ct);
 
             var shares = await _peopleProvider.GetSharesAsync(ct);
+            var categories = await _categoryProvider.GetCatalogAsync(ct);
             var expenses = await _repository.GetByMonthAsync(month, ct);
-            return _calculator.Calculate(month, shares, expenses);
+            return _calculator.Calculate(month, shares, categories, expenses);
         }
     }
 }

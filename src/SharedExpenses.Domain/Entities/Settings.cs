@@ -1,6 +1,4 @@
 using MongoDB.Bson.Serialization.Attributes;
-using MongoDB.Bson;
-using SharedExpenses.Domain.Enums;
 using SharedExpenses.Domain.Exceptions;
 
 namespace SharedExpenses.Domain.Entities
@@ -30,22 +28,21 @@ namespace SharedExpenses.Domain.Entities
             [BsonElement("description")] public string Description { get; private set; } = null!;
             [BsonElement("amount")] public long Amount { get; private set; }
 
-            [BsonElement("category")]
-            [BsonRepresentation(BsonType.String)]
-            public Category Category { get; private set; }
+            // Id de la categoría (ver Category). Conserva el nombre de campo "category" de la versión anterior
+            [BsonElement("category")] public string CategoryId { get; private set; } = null!;
 
             private FixedCost()
             {
             }
 
-            private FixedCost(string description, long amount, Category category)
+            private FixedCost(string description, long amount, string categoryId)
             {
                 Description = description;
                 Amount = amount;
-                Category = category;
+                CategoryId = categoryId;
             }
 
-            public static FixedCost Create(string description, long amount, Category category)
+            public static FixedCost Create(string description, long amount, string categoryId)
             {
                 if (string.IsNullOrWhiteSpace(description))
                     throw new DomainException("La descripción del costo fijo es obligatoria.");
@@ -53,8 +50,10 @@ namespace SharedExpenses.Domain.Entities
                     throw new DomainException("El arriendo se configura aparte, no como costo fijo.");
                 if (amount <= 0)
                     throw new DomainException("El monto del costo fijo debe ser mayor a 0.");
+                if (string.IsNullOrWhiteSpace(categoryId))
+                    throw new DomainException("La categoría del costo fijo es obligatoria.");
 
-                return new FixedCost(description.Trim(), amount, category);
+                return new FixedCost(description.Trim(), amount, categoryId.Trim());
             }
         }
 

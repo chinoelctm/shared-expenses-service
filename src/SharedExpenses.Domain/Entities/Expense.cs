@@ -1,6 +1,4 @@
-using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
-using SharedExpenses.Domain.Enums;
 using SharedExpenses.Domain.Exceptions;
 using SharedExpenses.Domain.ValueObjects;
 
@@ -22,9 +20,8 @@ namespace SharedExpenses.Domain.Entities
 
         [BsonElement("date")] public DateOnly Date { get; private set; }
 
-        [BsonElement("category")]
-        [BsonRepresentation(BsonType.String)]
-        public Category Category { get; private set; }
+        // Id de la categoría (ver Category). Conserva el nombre de campo "category" de la versión anterior
+        [BsonElement("category")] public string CategoryId { get; private set; } = null!;
 
         [BsonElement("isFixed")] public bool IsFixed { get; private set; }
 
@@ -56,7 +53,7 @@ namespace SharedExpenses.Domain.Entities
         {
         }
 
-        private Expense(Guid id, string description, long amount, DateOnly date, Category category, bool isFixed,
+        private Expense(Guid id, string description, long amount, DateOnly date, string categoryId, bool isFixed,
             bool isRent, bool paid, Installment? installment, DateTime createdOn)
         {
             Id = id;
@@ -64,7 +61,7 @@ namespace SharedExpenses.Domain.Entities
             Description = description;
             Amount = amount;
             Date = date;
-            Category = category;
+            CategoryId = ValidateCategory(categoryId);
             IsFixed = isFixed;
             IsRent = isRent;
             Paid = paid;
@@ -72,11 +69,11 @@ namespace SharedExpenses.Domain.Entities
             CreatedOn = createdOn;
         }
 
-        public static Expense Create(string description, long amount, DateOnly date, Category category, bool isFixed,
+        public static Expense Create(string description, long amount, DateOnly date, string categoryId, bool isFixed,
             bool paid, DateTime now, Guid? paidBy = null)
         {
             ValidateDetails(description, amount);
-            return new Expense(Guid.NewGuid(), description.Trim(), amount, date, category, isFixed,
+            return new Expense(Guid.NewGuid(), description.Trim(), amount, date, categoryId, isFixed,
                 isRent: false, paid, installment: null, now)
             {
                 PaidBy = ValidatePayer(paidBy)
@@ -88,13 +85,13 @@ namespace SharedExpenses.Domain.Entities
             if (amount < 0)
                 throw new DomainException("El arriendo no puede ser negativo.");
 
-            return new Expense(Guid.NewGuid(), RentDescription, amount, month.FirstDay, Category.Housing,
+            return new Expense(Guid.NewGuid(), RentDescription, amount, month.FirstDay, Category.RentCategoryId,
                 isFixed: true, isRent: true, paid: false, installment: null, now);
         }
 
         public static Expense CreateFixed(YearMonth month, Settings.FixedCost cost, DateTime now)
         {
-            return new Expense(Guid.NewGuid(), cost.Description, cost.Amount, month.FirstDay, cost.Category,
+            return new Expense(Guid.NewGuid(), cost.Description, cost.Amount, month.FirstDay, cost.CategoryId,
                 isFixed: true, isRent: false, paid: false, installment: null, now);
         }
 
@@ -104,7 +101,7 @@ namespace SharedExpenses.Domain.Entities
         /// Quien pagó (<paramref name="paidBy"/>) es el mismo en todas las cuotas.
         /// </summary>
         public static List<Expense> CreateInstallmentPlan(string description, long totalAmount, DateOnly firstDate,
-            Category category, bool isFixed, bool firstPaid, int installments, DateTime now, Guid? paidBy = null)
+            string categoryId, bool isFixed, bool firstPaid, int installments, DateTime now, Guid? paidBy = null)
         {
             var payer = ValidatePayer(paidBy);
             ValidateDetails(description, totalAmount);
@@ -122,7 +119,7 @@ namespace SharedExpenses.Domain.Entities
                     description.Trim(),
                     amount,
                     firstDate.AddMonths(i), // DateOnly.AddMonths ajusta al último día del mes (31/01 -> 28/02)
-                    category,
+                    categoryId,
                     isFixed,
                     isRent: false,
                     paid: i == 0 && firstPaid,
@@ -132,7 +129,7 @@ namespace SharedExpenses.Domain.Entities
         }
 
         /// <summary>Reconstruye un gasto desde un respaldo, conservando su Id.</summary>
-        public static Expense Restore(Guid id, string description, long amount, DateOnly date, Category category,
+        public static Expense Restore(Guid id, string description, long amount, DateOnly date, string categoryId,
             bool isFixed, bool isRent, bool paid, Installment? installment, DateTime now, Guid? paidBy = null)
         {
             if (id == Guid.Empty)
@@ -141,12 +138,12 @@ namespace SharedExpenses.Domain.Entities
             {
                 if (amount < 0)
                     throw new DomainException("El arriendo no puede ser negativo.");
-                return new Expense(id, RentDescription, amount, YearMonth.FromDate(date).FirstDay, Category.Housing,
+                return new Expense(id, RentDescription, amount, YearMonth.FromDate(date).FirstDay, Category.RentCategoryId,
                     isFixed: true, isRent: true, paid, installment: null, now);
             }
 
             ValidateDetails(description, amount);
-            return new Expense(id, description.Trim(), amount, date, category, isFixed, isRent: false, paid, installment, now)
+            return new Expense(id, description.Trim(), amount, date, categoryId, isFixed, isRent: false, paid, installment, now)
             {
                 PaidBy = ValidatePayer(paidBy)
             };
@@ -167,7 +164,7 @@ namespace SharedExpenses.Domain.Entities
             return normalized == "arriendo" || normalized.StartsWith("arriendo ");
         }
 
-        public void Update(string description, long amount, DateOnly date, Category category, bool isFixed, bool paid,
+        public void Update(string description, long amount, DateOnly date, string categoryId, bool isFixed, bool paid,
             DateTime now, Guid? paidBy = null)
         {
             if (IsRent)
@@ -178,7 +175,7 @@ namespace SharedExpenses.Domain.Entities
             Amount = amount;
             Date = date;
             Month = YearMonth.FromDate(date);
-            Category = category;
+            CategoryId = ValidateCategory(categoryId);
             IsFixed = isFixed;
             Paid = paid;
             PaidBy = ValidatePayer(paidBy);
@@ -218,6 +215,13 @@ namespace SharedExpenses.Domain.Entities
             if (paidBy == Guid.Empty)
                 throw new DomainException("La persona que pagó no es válida.");
             return paidBy;
+        }
+
+        private static string ValidateCategory(string categoryId)
+        {
+            if (string.IsNullOrWhiteSpace(categoryId))
+                throw new DomainException("La categoría es obligatoria.");
+            return categoryId.Trim();
         }
 
         private static void ValidateDetails(string description, long amount)

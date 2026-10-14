@@ -1,10 +1,11 @@
+using SharedExpenses.Application.Services.Categories;
 using SharedExpenses.Domain.Entities;
-using SharedExpenses.Domain.Enums;
-using SharedExpenses.Domain.Extensions;
 using SharedExpenses.Domain.ValueObjects;
 
 namespace SharedExpenses.Application.DTOs
 {
+    /// <param name="Category">Id de la categoría.</param>
+    /// <param name="CategoryColor">Color #rrggbb de la categoría.</param>
     /// <param name="Paid">Sin <paramref name="PaidBy"/>: gasto pagado. Con <paramref name="PaidBy"/>: los demás ya le devolvieron su parte.</param>
     /// <param name="PaidBy">Persona que pagó el total al momento de la compra (null si nadie aún).</param>
     /// <param name="Split">Cuánto le corresponde a cada persona activa y si ya está saldado; suma exactamente <paramref name="Amount"/>.</param>
@@ -14,8 +15,9 @@ namespace SharedExpenses.Application.DTOs
         string Description,
         long Amount,
         DateOnly Date,
-        Category Category,
+        string Category,
         string CategoryName,
+        string CategoryColor,
         bool IsFixed,
         bool IsRent,
         bool Paid,
@@ -24,7 +26,7 @@ namespace SharedExpenses.Application.DTOs
         InstallmentDto? Installment,
         List<PersonAmountDto> Split)
     {
-        public static ExpenseDto From(Expense expense, ContributionShares shares)
+        public static ExpenseDto From(Expense expense, ContributionShares shares, CategoryCatalog categories)
         {
             var amounts = shares.Split(expense.Amount);
             var split = shares.Members
@@ -37,8 +39,9 @@ namespace SharedExpenses.Application.DTOs
                 expense.Description,
                 expense.Amount,
                 expense.Date,
-                expense.Category,
-                expense.Category.GetDisplayName(),
+                expense.CategoryId,
+                categories.NameOf(expense.CategoryId),
+                categories.ColorOf(expense.CategoryId),
                 expense.IsFixed,
                 expense.IsRent,
                 expense.Paid,

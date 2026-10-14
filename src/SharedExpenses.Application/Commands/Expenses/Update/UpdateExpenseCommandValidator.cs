@@ -24,7 +24,7 @@ namespace SharedExpenses.Application.Commands.Expenses.Update
             RuleFor(x => x.Date).MustBeValidExpenseDate();
 
             RuleFor(x => x.Category)
-                .IsInEnum().WithMessage("La categoría no es válida.");
+                .NotEmpty().WithMessage("La categoría es obligatoria.");
 
             RuleFor(x => x.PaidBy)
                 .NotEqual(Guid.Empty).WithMessage("La persona que pagó no es válida.")

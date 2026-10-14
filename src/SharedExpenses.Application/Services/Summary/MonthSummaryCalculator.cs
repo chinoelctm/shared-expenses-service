@@ -1,6 +1,6 @@
 using SharedExpenses.Application.Queries.Months.GetSummary;
+using SharedExpenses.Application.Services.Categories;
 using SharedExpenses.Domain.Entities;
-using SharedExpenses.Domain.Extensions;
 using SharedExpenses.Domain.ValueObjects;
 
 namespace SharedExpenses.Application.Services.Summary
@@ -12,7 +12,7 @@ namespace SharedExpenses.Application.Services.Summary
     public class MonthSummaryCalculator : IMonthSummaryCalculator
     {
         public GetMonthSummaryResponse Calculate(YearMonth month, ContributionShares shares,
-            IReadOnlyCollection<Expense> expenses)
+            CategoryCatalog categories, IReadOnlyCollection<Expense> expenses)
         {
             var count = shares.Members.Count;
             var fixedByPerson = new long[count];
@@ -70,13 +70,14 @@ namespace SharedExpenses.Application.Services.Summary
                 })
                 .ToList();
 
-            var categories = expenses
-                .GroupBy(e => e.Category)
-                .Select(g => new { Category = g.Key, Amount = g.Sum(e => e.Amount) })
+            var byCategory = expenses
+                .GroupBy(e => e.CategoryId)
+                .Select(g => new { CategoryId = g.Key, Amount = g.Sum(e => e.Amount) })
                 .OrderByDescending(c => c.Amount)
                 .Select(c => new CategorySummaryDto(
-                    c.Category,
-                    c.Category.GetDisplayName(),
+                    c.CategoryId,
+                    categories.NameOf(c.CategoryId),
+                    categories.ColorOf(c.CategoryId),
                     c.Amount,
                     Percentage(c.Amount, total, decimals: 1)))
                 .ToList();
@@ -90,7 +91,7 @@ namespace SharedExpenses.Application.Services.Summary
                 VariableTotal: variableTotal,
                 Payments: new PaymentSummaryDto(paidTotal, total - paidTotal, (int)Percentage(paidTotal, total, decimals: 0)),
                 People: people,
-                Categories: categories);
+                Categories: byCategory);
         }
 
         private static void Accumulate(long[] totals, long[] split)

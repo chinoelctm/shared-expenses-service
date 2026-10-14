@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using SharedExpenses.Domain.Enums;
 using SharedExpenses.Domain.Options;
 
 namespace SharedExpenses.Infrastructure.Options
@@ -31,7 +30,7 @@ namespace SharedExpenses.Infrastructure.Options
         {
             public string Description { get; set; } = null!;
             public long Amount { get; set; }
-            public Category Category { get; set; } = Category.Housing;
+            public string Category { get; set; } = Domain.Entities.Category.RentCategoryId;
         }
     }
 }
