@@ -13,6 +13,7 @@ namespace SharedExpenses.Domain.Enums
         [Display(Name = "Comida / Delivery")] Food = 7,
         [Display(Name = "Tecnología / Electrónica")] Technology = 8,
         [Display(Name = "Salud / Farmacia")] Health = 9,
-        [Display(Name = "Otro")] Other = 10
+        [Display(Name = "Otro")] Other = 10,
+        [Display(Name = "Cookie")] Cookie = 11
     }
 }
