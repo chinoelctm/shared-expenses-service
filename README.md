@@ -103,7 +103,8 @@ static site en Render, `proxy.conf.json` en desarrollo): por eso la cookie del s
 | `JwtSettings:Issuer` / `Audience` | `SharedExpenses.Auth` / `SharedExpenses` | Deben coincidir con los del servicio de auth |
 | `JwtSettings:AccessTokenCookie` | `auth_token` | Cookie de la que se lee el token |
 
-Si se rota la clave del servicio de auth, hay que actualizar `JwtSettings:PublicKeyPem` (o la variable
+La clave es la misma de `personal-notes-auth-services` (la privada vive solo en los servicios de auth). Si se rota,
+hay que actualizar `JwtSettings:PublicKeyPem` aquí y en `personal-notes-service` (o la variable
 `JwtSettings__PublicKeyPem` en Render).
 
 ## Endpoints (`/api/v1`)
