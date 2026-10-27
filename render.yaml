@@ -7,7 +7,7 @@ services:
     plan: free
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    healthCheckPath: /api/v1/categories
+    healthCheckPath: /api/v1/health
     envVars:
       # La imagen aspnet:8.0 escucha en 8080; Render enruta al puerto indicado en PORT
       - key: PORT

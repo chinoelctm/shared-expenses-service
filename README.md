@@ -85,7 +85,30 @@ ninguna ordena en memoria.
   del mes si no existe), el remanente va en la última cuota y "pagado" aplica solo a la primera.
 - Montos en CLP como enteros (`long`). Fechas de auditoría en UTC.
 
+## Autenticación
+
+[shared-expenses-auth-service](https://github.com/chinoelctm/shared-expenses-auth-service) emite el access token
+(JWT RS256, 15 min) y lo deja en la cookie HttpOnly `auth_token`. Esta API lo valida con la **clave pública** de
+`JwtSettings:PublicKeyPem` (firma, emisor `SharedExpenses.Auth`, audiencia `SharedExpenses` y vencimiento, con
+30 s de tolerancia): puede verificar tokens pero no emitirlos. Todos los endpoints exigen sesión por política por
+defecto; solo `GET /api/v1/health` es anónimo (lo usa el health check de Render).
+
+Sin cookie, con un token vencido o con una firma inválida responde **401** (`ProblemDetails`); el front entonces
+llama a `/api/v1/auth/refresh` y reintenta. El front llega a esta API por el mismo origen (rewrite `/api/*` de su
+static site en Render, `proxy.conf.json` en desarrollo): por eso la cookie del sitio del front llega aquí.
+
+| Parámetro | Valor | Uso |
+|---|---|---|
+| `JwtSettings:PublicKeyPem` | clave pública del servicio de auth | Verifica la firma RS256 (es pública: va en el repo) |
+| `JwtSettings:Issuer` / `Audience` | `SharedExpenses.Auth` / `SharedExpenses` | Deben coincidir con los del servicio de auth |
+| `JwtSettings:AccessTokenCookie` | `auth_token` | Cookie de la que se lee el token |
+
+Si se rota la clave del servicio de auth, hay que actualizar `JwtSettings:PublicKeyPem` (o la variable
+`JwtSettings__PublicKeyPem` en Render).
+
 ## Endpoints (`/api/v1`)
+
+Todos requieren la cookie `auth_token` (401 sin sesión), salvo `/health`.
 
 | Método | Ruta | Respuesta |
 |---|---|---|
@@ -125,7 +148,7 @@ Enums viajan como texto (`"Supermarket"`), fechas como `"2026-10-05"`.
    - *Connect → Drivers*: copiar la cadena `mongodb+srv://usuario:clave@cluster.xxxxx.mongodb.net/...`.
 2. **Render** (API): **New → Blueprint** y elegir este repo. El `render.yaml` crea un Web Service gratuito
    con el `Dockerfile`. Render pedirá el valor de `ConnectionStrings__MongoUri`: pegar la cadena de Atlas.
-3. Probar `https://shared-expenses-service.onrender.com/api/v1/categories`.
+3. Probar `https://shared-expenses-service.onrender.com/api/v1/health` (el resto de los endpoints exige sesión).
 
 Las variables de entorno de Render reemplazan a `appsettings.json` (`ConnectionStrings__MongoUri`,
 `ConnectionStrings__MongoDb`, `Cors__AllowedOrigins__0`). Si el front queda en otra URL, cambiar
@@ -136,8 +159,9 @@ cerca de un minuto. Atlas M0 no tiene respaldos automáticos: usar *Descargar Re
 
 ## Front
 
-[shared-expenses-front](https://github.com/chinoelctm/shared-expenses-front) consume esta API. Los orígenes permitidos se configuran en
-`Cors:AllowedOrigins` de `appsettings.json` (por defecto `http://localhost:4200`).
+[shared-expenses-front](https://github.com/chinoelctm/shared-expenses-front) consume esta API por su mismo origen (rewrites de
+Render / proxy de `ng serve`), así que no depende de CORS; `Cors:AllowedOrigins` queda solo para llamadas directas
+desde `http://localhost:4200`.
 
 ## Limitaciones conocidas
 
