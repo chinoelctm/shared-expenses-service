@@ -5,6 +5,7 @@ using SharedExpenses.Api.Models.Expense.SetPayment;
 using SharedExpenses.Api.Models.Expense.UpdateExpense;
 using SharedExpenses.Application.Commands.Expenses.Add;
 using SharedExpenses.Application.Commands.Expenses.Delete;
+using SharedExpenses.Application.Commands.Expenses.MoveToNextMonth;
 using SharedExpenses.Application.Commands.Expenses.SetPayment;
 using SharedExpenses.Application.Commands.Expenses.Update;
 using SharedExpenses.Application.Queries.Expenses.GetById;
@@ -26,6 +27,8 @@ namespace SharedExpenses.Api.Endpoints
                 .WithSummary("Edita un gasto (si es cuota, solo esa cuota). El arriendo se edita en /months/{month}/rent.");
             group.MapPatch("/{expenseId:guid}/payment", SetPaymentAsync)
                 .WithSummary("Marca el gasto como pagado o pendiente. Si tiene paidBy, salda la parte de los demás.");
+            group.MapPost("/{expenseId:guid}/move-to-next-month", MoveToNextMonthAsync)
+                .WithSummary("Pasa un gasto pendiente al mes siguiente y agrega \"(Gasto mes anterior pendiente)\" a su descripción.");
             group.MapDelete("/{expenseId:guid}", DeleteAsync)
                 .WithSummary("Elimina el gasto. scope=Plan elimina todas las cuotas del plan. El arriendo se deja en $0.");
 
@@ -58,6 +61,12 @@ namespace SharedExpenses.Api.Endpoints
         {
             await mediator.Send(new SetExpensePaymentCommand(expenseId, request.Paid), ct);
             return Results.NoContent();
+        }
+
+        private static async Task<IResult> MoveToNextMonthAsync(Guid expenseId, IMediator mediator, CancellationToken ct)
+        {
+            var result = await mediator.Send(new MoveExpenseToNextMonthCommand(expenseId), ct);
+            return Results.Ok(result);
         }
 
         private static async Task<IResult> DeleteAsync(Guid expenseId, IMediator mediator, CancellationToken ct,

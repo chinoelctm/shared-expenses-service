@@ -81,6 +81,7 @@ ninguna ordena en memoria.
   costos fijos vigentes. Cambiar la configuración no altera los meses ya abiertos.
 - **Arriendo**: uno por mes, se edita con `PUT /months/{month}/rent`; no se elimina (DELETE lo deja en $0)
   y "Arriendo" no se acepta como descripción de otros gastos.
+- **Mover al próximo mes**: un gasto pendiente (no fijo ni arriendo) se pasa al mes siguiente con "(Gasto mes anterior pendiente)" en su nombre; si es una cuota, solo esa cuota. El mes de destino se abre con su arriendo y fijos si no existía.
 - **Cuotas**: `installments` de 2 a 48. Una cuota por mes desde la fecha indicada (el día se ajusta al último
   del mes si no existe), el remanente va en la última cuota y "pagado" aplica solo a la primera.
 - Montos en CLP como enteros (`long`). Fechas de auditoría en UTC.
@@ -128,6 +129,7 @@ Todos requieren la cookie `auth_token` (401 sin sesión), salvo `/health`.
 | GET    | `/expenses/{id}` | Gasto con su reparto |
 | PUT    | `/expenses/{id}` | 204 (si es cuota, edita solo esa cuota) |
 | PATCH  | `/expenses/{id}/payment` | 204, body `{ "paid": true }` |
+| POST   | `/expenses/{id}/move-to-next-month` | 200 `{ month, date, description }`: pasa un gasto pendiente al mes siguiente (mismo día o el último del mes) y agrega "(Gasto mes anterior pendiente)" a su nombre una sola vez. 400 si está pagado, es fijo o es el arriendo |
 | DELETE | `/expenses/{id}?scope=Single\|Plan` | 204 |
 | GET    | `/categories` | Categorías activas `{ id, name, color, locked }` (se siembran las por defecto si no hay ninguna) |
 | POST   | `/categories` | 201 `{ id }`, body `{ "name": "Mascotas", "color": "#a855f7" }` (409 si el nombre ya existe) |

@@ -10,6 +10,9 @@ namespace SharedExpenses.Domain.Entities
         public const int MaxDescriptionLength = 120;
         public const string RentDescription = "Arriendo";
 
+        /// <summary>Sufijo de la descripción de un gasto pendiente que se pasó al mes siguiente.</summary>
+        public const string CarryOverSuffix = "(Gasto mes anterior pendiente)";
+
         [BsonId] public Guid Id { get; private set; }
 
         [BsonElement("month")] public YearMonth Month { get; private set; }
@@ -208,6 +211,36 @@ namespace SharedExpenses.Domain.Entities
             if (Paid == paid) return;
             Paid = paid;
             UpdatedOn = now;
+        }
+
+        /// <summary>
+        /// Pasa un gasto pendiente al mes siguiente (mismo día; si no existe, el último del mes) y lo marca con
+        /// <see cref="CarryOverSuffix"/> en la descripción. Si ya lo tenía (se movió antes), no se repite.
+        /// </summary>
+        public void MoveToNextMonth(DateTime now)
+        {
+            if (IsRent)
+                throw new DomainException("El arriendo es propio de cada mes y no se puede mover.");
+            if (IsFixed)
+                throw new DomainException("Los costos fijos se generan cada mes y no se pueden mover.");
+            if (Paid)
+                throw new DomainException("Solo se pueden mover al mes siguiente los gastos pendientes de pago.");
+
+            Date = Date.AddMonths(1);
+            Month = YearMonth.FromDate(Date);
+            Description = WithCarryOverSuffix(Description);
+            UpdatedOn = now;
+        }
+
+        // Si la descripción con el sufijo supera el máximo, se acorta la parte original
+        private static string WithCarryOverSuffix(string description)
+        {
+            if (description.EndsWith(CarryOverSuffix, StringComparison.Ordinal))
+                return description;
+
+            var maxBase = MaxDescriptionLength - CarryOverSuffix.Length - 1;
+            var baseText = description.Length > maxBase ? description[..maxBase].TrimEnd() : description;
+            return $"{baseText} {CarryOverSuffix}";
         }
 
         private static Guid? ValidatePayer(Guid? paidBy)

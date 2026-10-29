@@ -1,5 +1,6 @@
 using SharedExpenses.Domain.Entities;
 using SharedExpenses.Domain.Exceptions;
+using SharedExpenses.Domain.ValueObjects;
 
 namespace SharedExpenses.Tests.Domain
 {
@@ -92,6 +93,72 @@ namespace SharedExpenses.Tests.Domain
 
             rent.ResetRent(Now);
             Assert.Equal(0, rent.Amount);
+        }
+
+        [Fact]
+        public void MoveToNextMonth_MovesDateAndMonthAndAddsSuffix()
+        {
+            var expense = Expense.Create("Supermercado", 50000, new DateOnly(2026, 10, 13), "Supermarket",
+                isFixed: false, paid: false, Now);
+
+            expense.MoveToNextMonth(Now);
+
+            Assert.Equal(new DateOnly(2026, 11, 13), expense.Date);
+            Assert.Equal("2026-11", expense.Month.ToString());
+            Assert.Equal("Supermercado (Gasto mes anterior pendiente)", expense.Description);
+            Assert.Equal(50000, expense.Amount);
+        }
+
+        [Fact]
+        public void MoveToNextMonth_ClampsDayCrossesYearAndDoesNotRepeatSuffix()
+        {
+            var expense = Expense.Create("Seguro", 3000, new DateOnly(2026, 12, 31), "Other",
+                isFixed: false, paid: false, Now);
+
+            expense.MoveToNextMonth(Now);
+            expense.MoveToNextMonth(Now);
+
+            Assert.Equal(new DateOnly(2027, 2, 28), expense.Date);
+            Assert.Equal("Seguro (Gasto mes anterior pendiente)", expense.Description);
+        }
+
+        [Fact]
+        public void MoveToNextMonth_ShortensLongDescriptionToFitSuffix()
+        {
+            var expense = Expense.Create(new string('a', Expense.MaxDescriptionLength), 1000,
+                new DateOnly(2026, 10, 1), "Other", isFixed: false, paid: false, Now);
+
+            expense.MoveToNextMonth(Now);
+
+            Assert.Equal(Expense.MaxDescriptionLength, expense.Description.Length);
+            Assert.EndsWith(" " + Expense.CarryOverSuffix, expense.Description);
+        }
+
+        [Fact]
+        public void MoveToNextMonth_KeepsPayerAndInstallment()
+        {
+            var payer = Guid.NewGuid();
+            var cuota = Expense.CreateInstallmentPlan("Notebook", 90000, new DateOnly(2026, 10, 13), "Technology",
+                isFixed: false, firstPaid: false, installments: 3, Now, payer)[0];
+
+            cuota.MoveToNextMonth(Now);
+
+            Assert.Equal(payer, cuota.PaidBy);
+            Assert.Equal(1, cuota.Installment!.Number);
+            Assert.Equal("2026-11", cuota.Month.ToString());
+        }
+
+        [Fact]
+        public void MoveToNextMonth_RejectsPaidFixedAndRent()
+        {
+            var paid = Expense.Create("Cine", 1000, new DateOnly(2026, 10, 13), "Leisure", isFixed: false, paid: true, Now);
+            var fixedCost = Expense.Create("Internet", 1000, new DateOnly(2026, 10, 1), "BasicServices",
+                isFixed: true, paid: false, Now);
+            var rent = Expense.CreateRent(YearMonth.Create(2026, 10), 450000, Now);
+
+            Assert.Throws<DomainException>(() => paid.MoveToNextMonth(Now));
+            Assert.Throws<DomainException>(() => fixedCost.MoveToNextMonth(Now));
+            Assert.Throws<DomainException>(() => rent.MoveToNextMonth(Now));
         }
     }
 }
