@@ -138,6 +138,7 @@ Todos requieren la cookie `auth_token` (401 sin sesión), salvo `/health`.
 | GET    | `/months` | Meses con gastos (`["2026-10", ...]`) |
 | GET    | `/months/{month}/expenses?status=All\|Pending\|Paid` | Gastos del mes; `split` = monto de cada persona |
 | GET    | `/months/{month}/summary` | Totales, por persona (total/fijos/variables/pagado/pendiente), pagos (%), categorías |
+| GET    | `/months/{month}/history?count=6` | Total de los últimos `count` meses (1-24) hasta `month`: `[{ month, total, fixed, variable }]`, del más antiguo al más reciente; no abre meses |
 | PUT    | `/months/{month}/rent` | 204 |
 | POST   | `/expenses` | 201 `{ ids, planId, amounts }` |
 | GET    | `/expenses/{id}` | Gasto con su reparto |
@@ -152,6 +153,7 @@ Todos requieren la cookie `auth_token` (401 sin sesión), salvo `/health`.
 | GET    | `/personal/months` | Meses con gastos personales del usuario |
 | GET    | `/personal/months/{month}/expenses` | Gastos personales del mes (de mayor a menor monto) |
 | GET    | `/personal/months/{month}/summary` | `{ total, count, budget, categories }`; `budget` = `{ amount, from, remaining, percentage }` o null |
+| GET    | `/personal/months/{month}/history?count=6` | Total y presupuesto de los últimos `count` meses: `[{ month, total, budget }]` |
 | PUT    | `/personal/months/{month}/budget` | 204, body `{ "amount": 500000 }`: rige desde ese mes y en los siguientes hasta que se cambie |
 | POST   | `/personal/expenses` | 201 `{ ids, planId, amounts }`, body `{ description, amount, date, category, installments }` |
 | PUT    | `/personal/expenses/{id}` | 204 (si es cuota, solo esa cuota) |

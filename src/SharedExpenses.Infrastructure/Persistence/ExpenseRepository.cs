@@ -102,6 +102,25 @@ namespace SharedExpenses.Infrastructure.Persistence
             return months.OrderBy(m => m.ToString()).ToList();
         }
 
+        // Solo trae month, isFixed y amount: ix_expenses_month_amount resuelve el filtro por month
+        public async Task<List<MonthlyTotal>> GetMonthlyTotalsAsync(IReadOnlyCollection<YearMonth> months,
+            CancellationToken ct = default)
+        {
+            var rows = await _expenses
+                .Find(Builders<Expense>.Filter.In(x => x.Month, months))
+                .Project(x => new { x.Month, x.IsFixed, x.Amount })
+                .ToListAsync(ct)
+                .ConfigureAwait(false);
+
+            return rows
+                .GroupBy(r => r.Month)
+                .Select(g => new MonthlyTotal(
+                    g.Key,
+                    g.Where(r => r.IsFixed).Sum(r => r.Amount),
+                    g.Where(r => !r.IsFixed).Sum(r => r.Amount)))
+                .ToList();
+        }
+
         public async Task<bool> IsMonthInitializedAsync(YearMonth month, CancellationToken ct = default)
         {
             var filter = Builders<Expense>.Filter.And(

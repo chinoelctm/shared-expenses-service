@@ -5,7 +5,9 @@ using SharedExpenses.Application.Commands.Personal.Add;
 using SharedExpenses.Application.Commands.Personal.Delete;
 using SharedExpenses.Application.Commands.Personal.SetBudget;
 using SharedExpenses.Application.Commands.Personal.Update;
+using SharedExpenses.Application.Queries.Months.GetHistory;
 using SharedExpenses.Application.Queries.Personal.GetExpenses;
+using SharedExpenses.Application.Queries.Personal.GetHistory;
 using SharedExpenses.Application.Queries.Personal.GetMonths;
 using SharedExpenses.Application.Queries.Personal.GetSummary;
 
@@ -26,6 +28,8 @@ namespace SharedExpenses.Api.Endpoints
                 .WithSummary("Gastos personales del mes, de mayor a menor monto.");
             group.MapGet("/months/{month}/summary", GetSummaryAsync)
                 .WithSummary("Total del mes, presupuesto que rige (y cuánto queda) y desglose por categoría.");
+            group.MapGet("/months/{month}/history", GetHistoryAsync)
+                .WithSummary("Total y presupuesto de cada uno de los últimos meses hasta {month}, del más antiguo al más reciente.");
             group.MapPut("/months/{month}/budget", SetBudgetAsync)
                 .WithSummary("Cuánto se quiere gastar desde ese mes; rige en los siguientes hasta que se cambie.");
             group.MapPost("/expenses", AddAsync)
@@ -53,6 +57,13 @@ namespace SharedExpenses.Api.Endpoints
         private static async Task<IResult> GetSummaryAsync(string month, IMediator mediator, CancellationToken ct)
         {
             var result = await mediator.Send(new GetPersonalMonthSummaryQuery(month), ct);
+            return Results.Ok(result);
+        }
+
+        private static async Task<IResult> GetHistoryAsync(string month, IMediator mediator, CancellationToken ct,
+            int count = GetMonthHistoryQuery.DefaultCount)
+        {
+            var result = await mediator.Send(new GetPersonalMonthHistoryQuery(month, count), ct);
             return Results.Ok(result);
         }
 

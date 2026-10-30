@@ -60,6 +60,13 @@ namespace SharedExpenses.Domain.ValueObjects
 
         public YearMonth AddMonths(int months) => FromDate(FirstDay.AddMonths(months));
 
+        /// <summary>Los <paramref name="count"/> meses que terminan en este, del más antiguo al más reciente.</summary>
+        public IReadOnlyList<YearMonth> LastMonths(int count)
+        {
+            var self = this;
+            return Enumerable.Range(0, count).Select(i => self.AddMonths(i - count + 1)).ToList();
+        }
+
         public override string ToString() => $"{Year:D4}-{Month:D2}";
 
         [GeneratedRegex(@"^\d{4}-\d{2}$")]

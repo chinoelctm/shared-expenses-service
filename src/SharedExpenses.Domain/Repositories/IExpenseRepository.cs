@@ -14,6 +14,9 @@ namespace SharedExpenses.Domain.Repositories
         Task<List<Expense>> GetByMonthAsync(YearMonth month, CancellationToken ct = default);
         Task<List<Expense>> GetAllAsync(CancellationToken ct = default);
         Task<List<YearMonth>> GetMonthsAsync(CancellationToken ct = default);
+
+        /// <summary>Totales de cada mes pedido que tenga gastos (los meses sin gastos no aparecen).</summary>
+        Task<List<MonthlyTotal>> GetMonthlyTotalsAsync(IReadOnlyCollection<YearMonth> months, CancellationToken ct = default);
         Task<bool> IsMonthInitializedAsync(YearMonth month, CancellationToken ct = default);
 
         /// <summary>

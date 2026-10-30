@@ -71,6 +71,23 @@ namespace SharedExpenses.Infrastructure.Persistence
                 .ConfigureAwait(false);
         }
 
+        // Solo trae month y amount: ix_personal_expenses_owner_month resuelve el filtro (dueño + meses)
+        public async Task<Dictionary<YearMonth, long>> GetMonthlyTotalsAsync(string ownerId,
+            IReadOnlyCollection<YearMonth> months, CancellationToken ct = default)
+        {
+            var filter = Builders<PersonalExpense>.Filter.And(
+                Builders<PersonalExpense>.Filter.Eq(x => x.OwnerId, ownerId),
+                Builders<PersonalExpense>.Filter.In(x => x.Month, months));
+
+            var rows = await _expenses
+                .Find(filter)
+                .Project(x => new { x.Month, x.Amount })
+                .ToListAsync(ct)
+                .ConfigureAwait(false);
+
+            return rows.GroupBy(r => r.Month).ToDictionary(g => g.Key, g => g.Sum(r => r.Amount));
+        }
+
         public async Task<List<YearMonth>> GetMonthsAsync(string ownerId, CancellationToken ct = default)
         {
             var cursor = await _expenses

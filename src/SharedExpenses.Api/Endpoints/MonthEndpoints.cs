@@ -2,6 +2,7 @@ using MediatR;
 using SharedExpenses.Api.Models.Month.UpdateRent;
 using SharedExpenses.Application.Commands.Months.UpdateRent;
 using SharedExpenses.Application.Queries.Months.Get;
+using SharedExpenses.Application.Queries.Months.GetHistory;
 using SharedExpenses.Application.Queries.Months.GetExpenses;
 using SharedExpenses.Application.Queries.Months.GetSummary;
 
@@ -21,6 +22,8 @@ namespace SharedExpenses.Api.Endpoints
                 .WithSummary("Gastos del mes con su reparto. Si el mes no existe se abre con arriendo y costos fijos.");
             group.MapGet("/{month}/summary", GetSummaryAsync)
                 .WithSummary("Totales del mes: fijos/variables, por persona, estado de pagos y categorías.");
+            group.MapGet("/{month}/history", GetHistoryAsync)
+                .WithSummary("Total de cada uno de los últimos meses hasta {month} (fijos y variables), del más antiguo al más reciente.");
             group.MapPut("/{month}/rent", UpdateRentAsync)
                 .WithSummary("Modifica el arriendo solo de ese mes.");
 
@@ -43,6 +46,13 @@ namespace SharedExpenses.Api.Endpoints
         private static async Task<IResult> GetSummaryAsync(string month, IMediator mediator, CancellationToken ct)
         {
             var result = await mediator.Send(new GetMonthSummaryQuery(month), ct);
+            return Results.Ok(result);
+        }
+
+        private static async Task<IResult> GetHistoryAsync(string month, IMediator mediator, CancellationToken ct,
+            int count = GetMonthHistoryQuery.DefaultCount)
+        {
+            var result = await mediator.Send(new GetMonthHistoryQuery(month, count), ct);
             return Results.Ok(result);
         }
 

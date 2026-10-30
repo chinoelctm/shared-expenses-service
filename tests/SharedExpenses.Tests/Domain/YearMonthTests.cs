@@ -31,5 +31,12 @@ namespace SharedExpenses.Tests.Domain
             Assert.Equal("2027-01", YearMonth.Parse("2026-12").AddMonths(1).ToString());
             Assert.Equal("2026-09", YearMonth.Parse("2026-10").AddMonths(-1).ToString());
         }
+
+        [Fact]
+        public void LastMonths_EndsInTheMonthAndCrossesYears()
+        {
+            Assert.Equal(["2026-11", "2026-12", "2027-01"],
+                YearMonth.Parse("2027-01").LastMonths(3).Select(m => m.ToString()));
+        }
     }
 }

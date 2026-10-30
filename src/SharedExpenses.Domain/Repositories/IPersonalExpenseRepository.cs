@@ -12,5 +12,9 @@ namespace SharedExpenses.Domain.Repositories
         Task<PersonalExpense?> GetByIdAsync(Guid id, CancellationToken ct = default);
         Task<List<PersonalExpense>> GetByMonthAsync(string ownerId, YearMonth month, CancellationToken ct = default);
         Task<List<YearMonth>> GetMonthsAsync(string ownerId, CancellationToken ct = default);
+
+        /// <summary>Total de gastos personales de cada mes pedido que tenga gastos.</summary>
+        Task<Dictionary<YearMonth, long>> GetMonthlyTotalsAsync(string ownerId, IReadOnlyCollection<YearMonth> months,
+            CancellationToken ct = default);
     }
 }
