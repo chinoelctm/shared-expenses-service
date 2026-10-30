@@ -1,5 +1,6 @@
 using FluentValidation;
 using MediatR;
+using SharedExpenses.Api.Services;
 using SharedExpenses.Application.Behaviors;
 using SharedExpenses.Application.Commands.Expenses.Add;
 using SharedExpenses.Application.Services.Categories;
@@ -7,6 +8,7 @@ using SharedExpenses.Application.Services.Configuration;
 using SharedExpenses.Application.Services.Months;
 using SharedExpenses.Application.Services.People;
 using SharedExpenses.Application.Services.Summary;
+using SharedExpenses.Application.Services.Users;
 
 namespace SharedExpenses.Api.Extensions
 {
@@ -29,6 +31,10 @@ namespace SharedExpenses.Api.Extensions
             services.AddScoped<ICategoryProvider, CategoryProvider>();
             services.AddScoped<IMonthInitializer, MonthInitializer>();
             services.AddSingleton<IMonthSummaryCalculator, MonthSummaryCalculator>();
+
+            // Dueño de los gastos personales: el usuario del token de la request
+            services.AddHttpContextAccessor();
+            services.AddScoped<ICurrentUser, HttpCurrentUser>();
 
             return services;
         }

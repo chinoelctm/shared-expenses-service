@@ -89,6 +89,8 @@ namespace SharedExpenses.Api.Extensions
             services.AddScoped<IPersonRepository, PersonRepository>();
             services.AddScoped<ICategoryRepository, CategoryRepository>();
             services.AddScoped<IExpenseRepository, ExpenseRepository>();
+            services.AddScoped<IPersonalExpenseRepository, PersonalExpenseRepository>();
+            services.AddScoped<IPersonalBudgetRepository, PersonalBudgetRepository>();
             services.AddSingleton<IDatabaseHealth, MongoDatabaseHealth>();
 
             // Índices en segundo plano: la API arranca aunque MongoDB todavía no responda

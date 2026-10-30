@@ -14,6 +14,8 @@ namespace SharedExpenses.Infrastructure.Context
         public IMongoCollection<Person> People { get; }
         public IMongoCollection<Category> Categories { get; }
         public IMongoCollection<Expense> Expenses { get; }
+        public IMongoCollection<PersonalExpense> PersonalExpenses { get; }
+        public IMongoCollection<PersonalBudget> PersonalBudgets { get; }
 
         public SharedExpensesDbContext(IMongoClient client, string databaseName)
         {
@@ -23,6 +25,8 @@ namespace SharedExpenses.Infrastructure.Context
             People = Database.GetCollection<Person>("people");
             Categories = Database.GetCollection<Category>("categories");
             Expenses = Database.GetCollection<Expense>("expenses");
+            PersonalExpenses = Database.GetCollection<PersonalExpense>("personalExpenses");
+            PersonalBudgets = Database.GetCollection<PersonalBudget>("personalBudgets");
         }
 
         /// <summary>
@@ -34,7 +38,27 @@ namespace SharedExpenses.Infrastructure.Context
             await SyncIndexesAsync(People, PeopleIndexes(), ct);
             await SyncIndexesAsync(Categories, CategoryIndexes(), ct);
             await SyncIndexesAsync(Expenses, ExpenseIndexes(), ct);
+            await SyncIndexesAsync(PersonalExpenses, PersonalExpenseIndexes(), ct);
         }
+
+        private static IReadOnlyList<CreateIndexModel<PersonalExpense>> PersonalExpenseIndexes() =>
+        [
+            // GetByMonth (dueño + mes, de mayor a menor monto y categoría) sin ordenar en memoria;
+            // GetMonths (distinct de month filtrando por dueño) sobre el prefijo
+            new CreateIndexModel<PersonalExpense>(
+                Builders<PersonalExpense>.IndexKeys
+                    .Ascending(x => x.OwnerId)
+                    .Ascending(x => x.Month)
+                    .Descending(x => x.Amount)
+                    .Ascending(x => x.CategoryId)
+                    .Ascending(x => x.CreatedOn),
+                new CreateIndexOptions { Name = "ix_personal_expenses_owner_month" }),
+
+            // DeleteByPlan (sparse por el mismo motivo que ix_expenses_plan)
+            new CreateIndexModel<PersonalExpense>(
+                Builders<PersonalExpense>.IndexKeys.Ascending("installment.planId"),
+                new CreateIndexOptions { Name = "ix_personal_expenses_plan", Sparse = true })
+        ];
 
         private static IReadOnlyList<CreateIndexModel<Category>> CategoryIndexes() =>
         [

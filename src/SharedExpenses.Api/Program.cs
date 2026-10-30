@@ -30,6 +30,7 @@ app.MapPeopleEndpoints();
 app.MapSettingsEndpoints();
 app.MapMonthEndpoints();
 app.MapExpenseEndpoints();
+app.MapPersonalEndpoints();
 app.MapCategoryEndpoints();
 app.MapBackupEndpoints();
 

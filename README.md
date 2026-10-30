@@ -44,6 +44,8 @@ Dependencias: `Api → Application → Infrastructure → Domain`.
 | `people` | Personas: nombre, aporte (`contribution`) y si está activa |
 | `settings` | Documento único: arriendo base y costos fijos |
 | `expenses` | Un documento por gasto (o por cuota), con `month` (`yyyy-MM`) indexado |
+| `personalExpenses` | Gastos personales: un documento por gasto (o cuota), con su dueño (`ownerId`, el `sub` del token) y `month` |
+| `personalBudgets` | Un documento por usuario (`_id` = `sub`): monto del presupuesto por mes desde el que rige (`months`) |
 
 ### Índices
 
@@ -59,6 +61,8 @@ ninguna ordena en memoria.
 | `expenses` | `ix_expenses_month_amount` | `month, isRent ↓, isFixed ↓, amount ↓, category, createdOn` | Gastos del mes ya ordenados (arriendo, fijos, variables de mayor a menor monto y por categoría); respaldo; `distinct` de meses |
 | `expenses` | `ux_expenses_month_rent` | `month` (único, parcial `isRent: true`) | ¿El mes está abierto?; garantiza un solo arriendo por mes |
 | `expenses` | `ix_expenses_plan` | `installment.planId` (sparse) | Borrar un plan de cuotas completo |
+| `personalExpenses` | `ix_personal_expenses_owner_month` | `ownerId, month, amount ↓, category, createdOn` | Gastos personales del mes ya ordenados; meses con gastos (`distinct` por dueño) |
+| `personalExpenses` | `ix_personal_expenses_plan` | `installment.planId` (sparse) | Borrar un plan de cuotas personal |
 
 `ix_expenses_plan` es *sparse* y no parcial: MongoDB no usa un índice parcial con filtro
 `installment: {$exists: true}` para una consulta por `installment.planId`.
@@ -85,6 +89,16 @@ ninguna ordena en memoria.
 - **Cuotas**: `installments` de 2 a 48. Una cuota por mes desde la fecha indicada (el día se ajusta al último
   del mes si no existe), el remanente va en la última cuota y "pagado" aplica solo a la primera.
 - Montos en CLP como enteros (`long`). Fechas de auditoría en UTC.
+
+## Gastos personales
+
+Cada usuario tiene además sus propios gastos (`/api/v1/personal`): no se reparten, siempre son variables (sin arriendo
+ni costos fijos) y solo los ve su dueño, el usuario del token (`sub`); un gasto de otro usuario responde 404. Admiten
+cuotas igual que los compartidos y usan las mismas categorías.
+
+El **presupuesto** es cuánto quiere gastar al mes: el monto configurado en un mes rige también en los siguientes hasta
+que se configure otro, y los meses anteriores conservan el suyo. El resumen devuelve lo que queda (`remaining`, negativo
+si se pasó) y el porcentaje gastado (puede superar 100). Los gastos personales no entran en `/backup`.
 
 ## Autenticación
 
@@ -135,6 +149,13 @@ Todos requieren la cookie `auth_token` (401 sin sesión), salvo `/health`.
 | POST   | `/categories` | 201 `{ id }`, body `{ "name": "Mascotas", "color": "#a855f7" }` (409 si el nombre ya existe) |
 | PUT    | `/categories/{id}` | 204 |
 | DELETE | `/categories/{id}` | 204, la desactiva: los gastos que ya la usan la conservan. `Housing` (arriendo) no se puede eliminar |
+| GET    | `/personal/months` | Meses con gastos personales del usuario |
+| GET    | `/personal/months/{month}/expenses` | Gastos personales del mes (de mayor a menor monto) |
+| GET    | `/personal/months/{month}/summary` | `{ total, count, budget, categories }`; `budget` = `{ amount, from, remaining, percentage }` o null |
+| PUT    | `/personal/months/{month}/budget` | 204, body `{ "amount": 500000 }`: rige desde ese mes y en los siguientes hasta que se cambie |
+| POST   | `/personal/expenses` | 201 `{ ids, planId, amounts }`, body `{ description, amount, date, category, installments }` |
+| PUT    | `/personal/expenses/{id}` | 204 (si es cuota, solo esa cuota) |
+| DELETE | `/personal/expenses/{id}?scope=Single\|Plan` | 204 |
 | GET    | `/health` | `{ status, database }`: 200 `Healthy` o 503 `Degraded` si MongoDB no responde |
 | GET    | `/backup` | Respaldo completo (personas, categorías, configuración, gastos) |
 | POST   | `/backup` | 204, reemplaza personas, categorías, configuración y gastos |
@@ -169,3 +190,4 @@ desde `http://localhost:4200`.
 ## Limitaciones conocidas
 
 - `POST /backup` no es transaccional (Mongo standalone no soporta transacciones).
+- El respaldo (`/backup`) no incluye los gastos personales ni el presupuesto.
