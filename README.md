@@ -136,7 +136,7 @@ Todos requieren la cookie `auth_token` (401 sin sesión), salvo `/health`.
 | GET    | `/settings` | Arriendo base y costos fijos |
 | PUT    | `/settings` | 204 |
 | GET    | `/months` | Meses con gastos (`["2026-10", ...]`) |
-| GET    | `/months/{month}/expenses?status=All\|Pending\|Paid` | Gastos del mes; `split` = monto de cada persona |
+| GET    | `/months/{month}/expenses?status=All\|Pending\|Paid` | Gastos del mes; `split` = monto de cada persona; `createdOn` = cuándo se registró (UTC) |
 | GET    | `/months/{month}/summary` | Totales, por persona (total/fijos/variables/pagado/pendiente), pagos (%), categorías |
 | GET    | `/months/{month}/history?count=6` | Total de los últimos `count` meses (1-24) hasta `month`: `[{ month, total, fixed, variable }]`, del más antiguo al más reciente; no abre meses |
 | PUT    | `/months/{month}/rent` | 204 |

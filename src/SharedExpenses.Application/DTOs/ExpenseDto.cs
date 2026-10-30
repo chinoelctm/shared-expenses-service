@@ -9,6 +9,7 @@ namespace SharedExpenses.Application.DTOs
     /// <param name="Paid">Sin <paramref name="PaidBy"/>: gasto pagado. Con <paramref name="PaidBy"/>: los demás ya le devolvieron su parte.</param>
     /// <param name="PaidBy">Persona que pagó el total al momento de la compra (null si nadie aún).</param>
     /// <param name="Split">Cuánto le corresponde a cada persona activa y si ya está saldado; suma exactamente <paramref name="Amount"/>.</param>
+    /// <param name="CreatedOn">Cuándo se registró (UTC); ordena los últimos gastos registrados.</param>
     public record ExpenseDto(
         Guid Id,
         string Month,
@@ -24,7 +25,8 @@ namespace SharedExpenses.Application.DTOs
         Guid? PaidBy,
         string? PaidByName,
         InstallmentDto? Installment,
-        List<PersonAmountDto> Split)
+        List<PersonAmountDto> Split,
+        DateTime CreatedOn)
     {
         public static ExpenseDto From(Expense expense, ContributionShares shares, CategoryCatalog categories)
         {
@@ -48,7 +50,8 @@ namespace SharedExpenses.Application.DTOs
                 expense.PaidBy,
                 shares.Members.FirstOrDefault(m => m.PersonId == expense.PaidBy)?.Name,
                 InstallmentDto.From(expense.Installment),
-                split);
+                split,
+                expense.CreatedOn);
         }
     }
 
